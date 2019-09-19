@@ -1,0 +1,6 @@
+lw r1,r0,0
+Lw r2,r0,4
+J 4
+Nor r3,r1,r2
+or r3, r1,r2
+Sw r3,r0,8

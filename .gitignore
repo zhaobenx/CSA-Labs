@@ -1,7 +1,7 @@
 .vscode/
 .history/
 output/
-Lab 0/RFresult.txt
+Setting Up Virtual Box/*
 
 # Prerequisites
 *.d
@@ -35,4 +35,5 @@ Lab 0/RFresult.txt
 *.exe
 *.out
 *.app
+
 
