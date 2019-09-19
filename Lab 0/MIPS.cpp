@@ -63,6 +63,12 @@ public:
         case ADDU:
             ALUresult = oprand1.to_ulong() + oprand2.to_ulong();
             break;
+        case OR:
+            ALUresult = oprand1 | oprand2;
+            break;
+        case NOR:
+            ALUresult = oprand1 ^ oprand2;
+            break;
         }
 
         return ALUresult;
@@ -182,12 +188,16 @@ int main()
     DataMem myDataMem;
 
     bitset<32> PC;
+    auto next_PC = PC;
     while (1)
     {
         // Fetch
+        PC = next_PC;
+        next_PC = PC.to_ulong() + 4;
         auto instruction = myInsMem.ReadMemory(PC);
 
         // If current insturciton is "11111111111111111111111111111111", then break;
+        cout << "PC: " << PC.to_ulong() << endl;
         cout << instruction.to_string() << endl;
         if (instruction.all())
             break;
@@ -210,31 +220,52 @@ int main()
                 myALU.ALUOperation(ADDU, myRF.ReadData1, myRF.ReadData2);
                 myRF.ReadWrite(0, 0, rd, myALU.ALUresult, 1);
                 break;
+            case 0x25: // or
+                cout << "or r" << rd.to_ulong() << ", r" << rs.to_ulong() << ", r" << rt.to_ulong() << endl;
+                myRF.ReadWrite(rs, rt, 0, 0, 0);
+                myALU.ALUOperation(OR, myRF.ReadData1, myRF.ReadData2);
+                myRF.ReadWrite(0, 0, rd, myALU.ALUresult, 1);
+                break;
+            case 0x27: // nor
+                cout << "nor r" << rd.to_ulong() << ", r" << rs.to_ulong() << ", r" << rt.to_ulong() << endl;
+                myRF.ReadWrite(rs, rt, 0, 0, 0);
+                myALU.ALUOperation(NOR, myRF.ReadData1, myRF.ReadData2);
+                myRF.ReadWrite(0, 0, rd, myALU.ALUresult, 1);
+                break;
+            }
+        }
+        else if (opcode == 0x02 || opcode == 0x03)
+        {
+            // J-type Instruction
+            auto imm = bitset<26>((instruction).to_ulong() & 0x3ffffff);
+            if (opcode == 0x02)
+            {
+                cout << "j " << imm.to_ulong() << endl;
+                next_PC = (PC.to_ulong() & 0xf0000000) + (imm.to_ulong() << 2);
             }
         }
         else
         {
             // I-type Instruction
             auto imm = bitset<16>((instruction).to_ulong() & 0xffff);
-            switch (opcode.to_ulong()) // lw
+            switch (opcode.to_ulong())
             {
             case 0x09: // addiu
-                cout << "addiu r" << rs.to_ulong() << ", r" << rt.to_ulong() << ", " << imm.to_ulong() << endl;
+                cout << "addiu r" << rt.to_ulong() << ", r" << rs.to_ulong() << ", " << imm.to_ulong() << endl;
                 myRF.ReadWrite(rs, 0, 0, 0, 0);
-                cout << imm.to_ulong()<<endl;
                 myALU.ALUOperation(ADDU, myRF.ReadData1, imm.to_ulong());
                 myRF.ReadWrite(0, 0, rt, myALU.ALUresult, 1);
                 break;
 
             case 0x23: // lw
                 // cout << "LW\n";
-                cout << "lw r" << rs.to_ulong() << ", r" << rt.to_ulong() << ", " << imm.to_ulong() << endl;
+                cout << "lw r" << rt.to_ulong() << ", r" << rs.to_ulong() << ", " << imm.to_ulong() << endl;
                 myRF.ReadWrite(rs, 0, 0, 0, 0);
                 myRF.ReadWrite(0, 0, rt, myDataMem.MemoryAccess(myRF.ReadData1.to_ulong() + imm.to_ulong(), 0, 1, 0), 1);
                 break;
             case 0x2b: // sw
                 // cout << "SW\n";
-                cout << "sw r" << rs.to_ulong() << ", r" << rt.to_ulong() << ", " << imm.to_ulong() << endl;
+                cout << "sw r" << rt.to_ulong() << ", r" << rs.to_ulong() << ", " << imm.to_ulong() << endl;
                 myRF.ReadWrite(rs, rt, 0, 0, 0); //mem, reg
                 myDataMem.MemoryAccess(myRF.ReadData1.to_ulong() + imm.to_ulong(), myRF.ReadData2, 0, 1);
 
@@ -250,7 +281,8 @@ int main()
         // Write back to RF
 
         myRF.OutputRF(); // dump RF;
-        PC = PC.to_ulong() + 4;
+        //PC = PC.to_ulong() + 4;
+        //if(PC.to_ulong() > 50) break;
     }
     myDataMem.OutputDataMem(); // dump data mem
 
