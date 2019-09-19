@@ -198,41 +198,49 @@ int main()
         auto rt = bitset<5>((instruction >> 16).to_ulong() & 0x1f);
         if (!opcode.any())
         {
+            // R-type Instruction
             auto rd = bitset<5>((instruction >> 11).to_ulong() & 0x1f);
             auto shamt = bitset<5>((instruction >> 6).to_ulong() & 0x1f);
             auto funct = bitset<6>((instruction).to_ulong() & 0x3f);
             switch (funct.to_ulong())
             {
-            case 0x21: //addu
-                cout<<"addu r"<<rd.to_ulong()<<", r"<<rs.to_ulong()<<", r"<<rt.to_ulong()<<endl;
+            case 0x21: // addu
+                cout << "addu r" << rd.to_ulong() << ", r" << rs.to_ulong() << ", r" << rt.to_ulong() << endl;
                 myRF.ReadWrite(rs, rt, 0, 0, 0);
-                auto result = myALU.ALUOperation(ADDU, myRF.ReadData1, myRF.ReadData2);
-                myRF.ReadWrite(0, 0, rd, result, 1);
+                myALU.ALUOperation(ADDU, myRF.ReadData1, myRF.ReadData2);
+                myRF.ReadWrite(0, 0, rd, myALU.ALUresult, 1);
                 break;
             }
         }
         else
         {
-            auto imm = bitset<6>((instruction).to_ulong() & 0xffff);
+            // I-type Instruction
+            auto imm = bitset<16>((instruction).to_ulong() & 0xffff);
             switch (opcode.to_ulong()) // lw
             {
-            case 0x23:
+            case 0x09: // addiu
+                cout << "addiu r" << rs.to_ulong() << ", r" << rt.to_ulong() << ", " << imm.to_ulong() << endl;
+                myRF.ReadWrite(rs, 0, 0, 0, 0);
+                cout << imm.to_ulong()<<endl;
+                myALU.ALUOperation(ADDU, myRF.ReadData1, imm.to_ulong());
+                myRF.ReadWrite(0, 0, rt, myALU.ALUresult, 1);
+                break;
+
+            case 0x23: // lw
                 // cout << "LW\n";
-                cout<<"lw r"<<rs.to_ulong()<<", r"<<rt.to_ulong()<<", "<<imm.to_ulong()<<endl;
+                cout << "lw r" << rs.to_ulong() << ", r" << rt.to_ulong() << ", " << imm.to_ulong() << endl;
                 myRF.ReadWrite(rs, 0, 0, 0, 0);
                 myRF.ReadWrite(0, 0, rt, myDataMem.MemoryAccess(myRF.ReadData1.to_ulong() + imm.to_ulong(), 0, 1, 0), 1);
                 break;
-            case 0x2b:
+            case 0x2b: // sw
                 // cout << "SW\n";
-                cout<<"sw r"<<rs.to_ulong()<<", r"<<rt.to_ulong()<<", "<<imm.to_ulong()<<endl;
+                cout << "sw r" << rs.to_ulong() << ", r" << rt.to_ulong() << ", " << imm.to_ulong() << endl;
                 myRF.ReadWrite(rs, rt, 0, 0, 0); //mem, reg
                 myDataMem.MemoryAccess(myRF.ReadData1.to_ulong() + imm.to_ulong(), myRF.ReadData2, 0, 1);
 
                 break;
             }
         }
-
-
 
         // myRF.ReadWrite(instruction);
         // Execute
