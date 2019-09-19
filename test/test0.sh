@@ -32,7 +32,12 @@ do
 	cp $execuable ./$temp/$execuable
 
 	cd $temp
-	./$execuable > /dev/null
+	if [ "$1" = "show" ]; then
+		./$execuable 
+	else
+		./$execuable > /dev/null
+	fi
+
 
 	cmp RFresult_answer.txt  RFresult.txt -s
 	s1=$?
