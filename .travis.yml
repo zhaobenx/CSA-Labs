@@ -12,3 +12,6 @@ addons:
 
 script:
   - bash ./test/test0.sh
+
+notifications:
+    email: false
