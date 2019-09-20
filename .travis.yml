@@ -11,4 +11,4 @@ addons:
       - g++-7
 
 script:
-  - ./test/test0.sh
+  - bash ./test/test0.sh
