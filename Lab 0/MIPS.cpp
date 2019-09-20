@@ -73,7 +73,7 @@ public:
             ALUresult = oprand1 | oprand2;
             break;
         case NOR:
-            ALUresult = oprand1 ^ oprand2;
+            ALUresult = ~(oprand1 | oprand2);
             break;
         default:
             ALUresult = 0;
@@ -232,6 +232,10 @@ int main()
                 cout << "subu r" << rd.to_ulong() << ", r" << rs.to_ulong() << ", r" << rt.to_ulong() << endl;
                 oprand = SUBU;
                 break;
+            case 0x24: // and
+                cout << "and r" << rd.to_ulong() << ", r" << rs.to_ulong() << ", r" << rt.to_ulong() << endl;
+                oprand = AND;
+                break;
             case 0x25: // or
                 cout << "or r" << rd.to_ulong() << ", r" << rs.to_ulong() << ", r" << rt.to_ulong() << endl;
                 oprand = OR;
@@ -245,7 +249,7 @@ int main()
             myALU.ALUOperation(oprand, myRF.ReadData1, myRF.ReadData2);
             myRF.ReadWrite(0, 0, rd, myALU.ALUresult, 1);
         }
-        else if (opcode == 0x02 || opcode == 0x03)
+        else if (opcode == 0x02 || opcode == 0x03 || opcode == 0x3f)
         {
             // J-type Instruction
             auto imm = bitset<26>((instruction).to_ulong() & 0x3ffffff);
@@ -253,6 +257,11 @@ int main()
             {
                 cout << "j " << imm.to_ulong() << endl;
                 next_PC = ((PC.to_ulong() + 4) & 0xf0000000) + (imm.to_ulong() << 2);
+            }
+            else if (opcode == 0x3f)
+            {
+                cout << "halt" << endl;
+                break;
             }
         }
         else
