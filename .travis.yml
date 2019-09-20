@@ -11,9 +11,13 @@ addons:
       - gcc-7
       - g++-7
 
-script:
+install:
   - export CC=gcc-7
   - export CXX=g++-7
+  - echo ${CXX}
+  - ${CXX} --version
+
+script:
   - bash ./test/test0.sh
 
 notifications:
