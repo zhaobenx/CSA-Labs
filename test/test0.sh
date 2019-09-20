@@ -9,7 +9,7 @@ temp="temp"
 execuable="Lab0"
 
 
-g++ $src_dir/MIPS.cpp -o $execuable
+CXX $src_dir/MIPS.cpp -o $execuable
 
 # cd $temp
 
