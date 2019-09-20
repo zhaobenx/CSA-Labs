@@ -63,12 +63,20 @@ public:
         case ADDU:
             ALUresult = oprand1.to_ulong() + oprand2.to_ulong();
             break;
+        case SUBU:
+            ALUresult = oprand1.to_ulong() - oprand2.to_ulong();
+            break;
+        case AND:
+            ALUresult = oprand1 & oprand2;
+            break;
         case OR:
             ALUresult = oprand1 | oprand2;
             break;
         case NOR:
             ALUresult = oprand1 ^ oprand2;
             break;
+        default:
+            ALUresult = 0;
         }
 
         return ALUresult;
@@ -212,27 +220,30 @@ int main()
             auto rd = bitset<5>((instruction >> 11).to_ulong() & 0x1f);
             auto shamt = bitset<5>((instruction >> 6).to_ulong() & 0x1f);
             auto funct = bitset<6>((instruction).to_ulong() & 0x3f);
+            int oprand = 0;
+
             switch (funct.to_ulong())
             {
             case 0x21: // addu
                 cout << "addu r" << rd.to_ulong() << ", r" << rs.to_ulong() << ", r" << rt.to_ulong() << endl;
-                myRF.ReadWrite(rs, rt, 0, 0, 0);
-                myALU.ALUOperation(ADDU, myRF.ReadData1, myRF.ReadData2);
-                myRF.ReadWrite(0, 0, rd, myALU.ALUresult, 1);
+                oprand = ADDU;
+                break;
+            case 0x23: // subu
+                cout << "subu r" << rd.to_ulong() << ", r" << rs.to_ulong() << ", r" << rt.to_ulong() << endl;
+                oprand = SUBU;
                 break;
             case 0x25: // or
                 cout << "or r" << rd.to_ulong() << ", r" << rs.to_ulong() << ", r" << rt.to_ulong() << endl;
-                myRF.ReadWrite(rs, rt, 0, 0, 0);
-                myALU.ALUOperation(OR, myRF.ReadData1, myRF.ReadData2);
-                myRF.ReadWrite(0, 0, rd, myALU.ALUresult, 1);
+                oprand = OR;
                 break;
             case 0x27: // nor
                 cout << "nor r" << rd.to_ulong() << ", r" << rs.to_ulong() << ", r" << rt.to_ulong() << endl;
-                myRF.ReadWrite(rs, rt, 0, 0, 0);
-                myALU.ALUOperation(NOR, myRF.ReadData1, myRF.ReadData2);
-                myRF.ReadWrite(0, 0, rd, myALU.ALUresult, 1);
+                oprand = NOR;
                 break;
             }
+            myRF.ReadWrite(rs, rt, 0, 0, 0);
+            myALU.ALUOperation(oprand, myRF.ReadData1, myRF.ReadData2);
+            myRF.ReadWrite(0, 0, rd, myALU.ALUresult, 1);
         }
         else if (opcode == 0x02 || opcode == 0x03)
         {
@@ -241,7 +252,7 @@ int main()
             if (opcode == 0x02)
             {
                 cout << "j " << imm.to_ulong() << endl;
-                next_PC = (PC.to_ulong() & 0xf0000000) + (imm.to_ulong() << 2);
+                next_PC = ((PC.to_ulong() + 4) & 0xf0000000) + (imm.to_ulong() << 2);
             }
         }
         else
@@ -250,6 +261,14 @@ int main()
             auto imm = bitset<16>((instruction).to_ulong() & 0xffff);
             switch (opcode.to_ulong())
             {
+            case 0x04: // beq
+                cout << "beq r" << rt.to_ulong() << ", r" << rs.to_ulong() << ", " << imm.to_ulong() << endl;
+                myRF.ReadWrite(rs, rt, 0, 0, 0);
+                if (myRF.ReadData1 == myRF.ReadData2)
+                {
+                    next_PC = (4 + PC.to_ulong()) + (imm.to_ulong() << 2);
+                }
+                break;
             case 0x09: // addiu
                 cout << "addiu r" << rt.to_ulong() << ", r" << rs.to_ulong() << ", " << imm.to_ulong() << endl;
                 myRF.ReadWrite(rs, 0, 0, 0, 0);
@@ -281,8 +300,6 @@ int main()
         // Write back to RF
 
         myRF.OutputRF(); // dump RF;
-        //PC = PC.to_ulong() + 4;
-        //if(PC.to_ulong() > 50) break;
     }
     myDataMem.OutputDataMem(); // dump data mem
 
