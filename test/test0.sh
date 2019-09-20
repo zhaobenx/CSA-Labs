@@ -70,3 +70,10 @@ done
 rm -r $temp
 rm $execuable
 echo $successful successful, $failed failed
+
+if [[ $failed -gt 0 ]]; 
+then
+	exit 1;
+else
+	exit 0;
+fi

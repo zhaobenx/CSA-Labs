@@ -1,0 +1,15 @@
+sudo: false
+language: cpp
+compiler:
+  - gcc
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+
+    packages:
+      - g++-7.4.0
+
+script:
+  - ./test/test0.sh
