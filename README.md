@@ -6,4 +6,5 @@ Computing Systems Architecture course labs.
 ## Lab 0 
 
 Using c++ to write a simple MIPS instruction-level simulator. 
-[Lab requirement](/Lab%200/Lab%200.pdf)
+[Lab requirement](./Lab%200/Lab%200.pdf)
+
