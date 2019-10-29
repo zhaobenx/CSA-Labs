@@ -349,6 +349,21 @@ int main()
             newState.MEM.nop = false;
             auto ALUin1 = state.EX.Read_data1;
             auto ALUin2 = (state.EX.is_I_type) ? signextend(state.EX.Imm) : state.EX.Read_data2;
+            if (state.MEM.wrt_enable) // mem forward
+            {
+                if (state.EX.Rs == state.MEM.Wrt_reg_addr && !state.MEM.rd_mem)
+                    ALUin1 = state.MEM.ALUresult;
+                else if (state.EX.Rt == state.MEM.Wrt_reg_addr && !state.MEM.rd_mem)
+                    ALUin2 = state.MEM.ALUresult;
+            }
+            if (state.WB.wrt_enable) // wb forward
+            {
+                if (state.EX.Rs == state.WB.Wrt_reg_addr)
+                    ALUin1 = state.WB.Wrt_data;
+                if (state.EX.Rt == state.WB.Wrt_reg_addr)
+                    ALUin2 = state.WB.Wrt_data;
+
+            }
             auto ALUout = state.EX.alu_op ? ALUin1.to_ulong() + ALUin2.to_ulong() : ALUin1.to_ulong() - ALUin2.to_ulong();
 
             // newState.MEM.ALUresult = state.EX.wrt_mem ? myRF.readRF(state.EX.Rs) : ALUout;
@@ -419,12 +434,12 @@ int main()
             newState.IF.PC = state.IF.PC.to_ulong() + 4;
         }
 
-        if (isBranch){
+        if (isBranch)
+        {
             isBranch = false;
             newState.IF.PC = branchAddress;
             newState.ID = state.ID;
             newState.ID.nop = true;
-
         }
         if (newState.ID.Instr.all() /* || !newState.ID.Instr.any() */)
         {
