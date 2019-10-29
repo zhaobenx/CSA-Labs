@@ -258,7 +258,7 @@ void printState(stateStruct state, int cycle)
         printstate << "WB.Wrt_reg_addr:\t" << state.WB.Wrt_reg_addr << endl;
         printstate << "WB.wrt_enable:\t" << state.WB.wrt_enable << endl;
         printstate << "WB.nop:\t" << state.WB.nop << endl;
-        printstate << "---------------------------------" << endl;
+        // printstate << "---------------------------------" << endl;
     }
     else
         cout << "Unable to open file";
@@ -292,6 +292,8 @@ int main()
     DataMem myDataMem;
     stateStruct state, newState;
     auto cycle(0);
+    bool isBranch(0);
+    auto branchAddress = bitset<32>(0);
     // state.IF.PC = 0;
     // state.IF.nop = false;
     // state.ID.nop = true;
@@ -372,6 +374,7 @@ int main()
             auto opcode = bitset<6>((state.ID.Instr >> 26).to_ulong());
             /*         auto rs = bitset<5>((state.ID.Instr >> 21).to_ulong() & 0x1f);
         auto rt = bitset<5>((state.ID.Instr >> 16).to_ulong() & 0x1f); */
+
             auto funct = bitset<6>((state.ID.Instr).to_ulong() & 0x3f);
             newState.EX.is_I_type = opcode != 0 && opcode != 2;
             newState.EX.Rs = bitset<5>((state.ID.Instr >> 21).to_ulong() & 0x1f);
@@ -381,7 +384,7 @@ int main()
             newState.EX.Read_data1 = myRF.readRF(newState.EX.Rs);
             newState.EX.Read_data2 = myRF.readRF(newState.EX.Rt);
             // cout << "read " << newState.EX.Rt.to_ulong() << " : " << newState.EX.Read_data2.to_string() << " write mem? " << newState.EX.wrt_mem << endl;
-
+            branchAddress = state.IF.PC.to_ulong() + 4 + (newState.EX.Imm.to_ulong() << 2);
             newState.EX.alu_op = 1;
             newState.EX.wrt_enable = false;
             if (newState.EX.is_I_type)
@@ -390,6 +393,9 @@ int main()
                 newState.EX.Wrt_reg_addr = newState.EX.Rt; // Rt
                 if (opcode == 0x23)                        // lw
                     newState.EX.wrt_enable = true;
+                if (opcode == 0x04) // beq in this lab, treat it as bne
+                    if (newState.EX.Read_data2 != newState.EX.Read_data1)
+                        isBranch = true;
             }
             else
             {
@@ -413,6 +419,13 @@ int main()
             newState.IF.PC = state.IF.PC.to_ulong() + 4;
         }
 
+        if (isBranch){
+            isBranch = false;
+            newState.IF.PC = branchAddress;
+            newState.ID = state.ID;
+            newState.ID.nop = true;
+
+        }
         if (newState.ID.Instr.all() /* || !newState.ID.Instr.any() */)
         {
             newState.IF.nop = true;
