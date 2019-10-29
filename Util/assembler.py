@@ -5,6 +5,7 @@ Created on 2019-10-14 18:41:41
 @Version : 0.0.1
 """
 import re
+import sys
 
 FUNCT = {"addu": 0x21, "subu": 0x23}
 OPCODE = {"lw": 0x23, "sw": 0x2B, "beq": 0x04, "halt": 0xFF}
@@ -91,14 +92,12 @@ def test():
 
 
 def main():
-    # test()
-    a = """
-addu r3, r2, r1
-subu r5, r2, r0
-lw r1, 4(r1)
-beq r1,r2, 1
-halt"""
-    print(asms_to_binary_string(a))
+    if len(sys.argv) < 2:
+        print("Please input asm file name")
+        sys.exit(0)
+    with open(sys.argv[1]) as f :
+        print(asms_to_binary_string(f.read()))
+
 
 
 if __name__ == "__main__":
