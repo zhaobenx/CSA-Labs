@@ -324,6 +324,7 @@ int main()
         {
             newState.WB.nop = false;
             newState.WB.Wrt_data = state.MEM.ALUresult;
+            auto writeData = state.MEM.Store_data;
             if (state.MEM.rd_mem)
             {
                 newState.WB.Wrt_data = myDataMem.readDataMem(state.MEM.ALUresult);
@@ -331,7 +332,12 @@ int main()
             else if (state.MEM.wrt_mem)
             {
                 cout << "alu result: " << state.MEM.ALUresult.to_ulong() << ", data:" << state.MEM.Store_data.to_string() << endl;
-                myDataMem.writeDataMem(state.MEM.ALUresult, state.MEM.Store_data);
+                if (state.WB.wrt_enable && state.WB.Wrt_reg_addr == state.MEM.Rt) // mem-mem forwarding
+                {
+                    writeData = state.WB.Wrt_data;
+                }
+
+                myDataMem.writeDataMem(state.MEM.ALUresult, writeData);
             }
             newState.WB.Rs = state.MEM.Rs;
             newState.WB.Rt = state.MEM.Rt;
@@ -349,20 +355,19 @@ int main()
             newState.MEM.nop = false;
             auto ALUin1 = state.EX.Read_data1;
             auto ALUin2 = (state.EX.is_I_type) ? signextend(state.EX.Imm) : state.EX.Read_data2;
-            if (state.MEM.wrt_enable) // mem forward
+            if (state.MEM.wrt_enable) // ex-ex forwarding
             {
                 if (state.EX.Rs == state.MEM.Wrt_reg_addr && !state.MEM.rd_mem)
                     ALUin1 = state.MEM.ALUresult;
                 else if (state.EX.Rt == state.MEM.Wrt_reg_addr && !state.MEM.rd_mem)
                     ALUin2 = state.MEM.ALUresult;
             }
-            if (state.WB.wrt_enable) // wb forward
+            if (state.WB.wrt_enable) // mem-ex forwarding
             {
                 if (state.EX.Rs == state.WB.Wrt_reg_addr)
                     ALUin1 = state.WB.Wrt_data;
                 if (state.EX.Rt == state.WB.Wrt_reg_addr)
                     ALUin2 = state.WB.Wrt_data;
-
             }
             auto ALUout = state.EX.alu_op ? ALUin1.to_ulong() + ALUin2.to_ulong() : ALUin1.to_ulong() - ALUin2.to_ulong();
 
