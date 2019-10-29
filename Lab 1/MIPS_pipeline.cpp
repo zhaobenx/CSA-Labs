@@ -10,12 +10,14 @@ struct IFStruct
 {
     bitset<32> PC;
     bool nop;
+    IFStruct() : PC(0), nop(0) {}
 };
 
 struct IDStruct
 {
     bitset<32> Instr;
     bool nop;
+    IDStruct() : Instr(0), nop(1) {}
 };
 
 struct EXStruct
@@ -32,6 +34,7 @@ struct EXStruct
     bool alu_op; //1 for addu, lw, sw, 0 for subu
     bool wrt_enable;
     bool nop;
+    EXStruct() : Read_data1(0), Read_data2(0), Imm(0), Rs(0), Rt(0), Wrt_reg_addr(0), is_I_type(0), rd_mem(0), alu_op(0), wrt_enable(0), nop(1) {}
 };
 
 struct MEMStruct
@@ -45,6 +48,7 @@ struct MEMStruct
     bool wrt_mem;
     bool wrt_enable;
     bool nop;
+    MEMStruct() : ALUresult(0), Store_data(0), Rs(0), Rt(0), Wrt_reg_addr(0), rd_mem(0), wrt_mem(0), wrt_enable(0), nop(1) {}
 };
 
 struct WBStruct
@@ -55,6 +59,7 @@ struct WBStruct
     bitset<5> Wrt_reg_addr;
     bool wrt_enable;
     bool nop;
+    WBStruct() : Wrt_data(0), Rs(0), Rt(0), Wrt_reg_addr(0), wrt_enable(0), nop(1) {}
 };
 
 struct stateStruct
@@ -90,7 +95,7 @@ public:
     void outputRF()
     {
         ofstream rfout;
-        rfout.open("RFresult.txt", std::ios_base::app);
+        rfout.open("RFresult.txt");
         if (rfout.is_open())
         {
             rfout << "State of RF:\t" << endl;
@@ -253,10 +258,30 @@ void printState(stateStruct state, int cycle)
         printstate << "WB.Wrt_reg_addr:\t" << state.WB.Wrt_reg_addr << endl;
         printstate << "WB.wrt_enable:\t" << state.WB.wrt_enable << endl;
         printstate << "WB.nop:\t" << state.WB.nop << endl;
+        printstate << "---------------------------------" << endl;
     }
     else
         cout << "Unable to open file";
     printstate.close();
+}
+
+// EXStruct::EXStruct()
+// {
+//     this->Imm;
+// }
+
+bitset<32> signextend(bitset<16> imm)
+{
+    string sestring;
+    if (imm[15] == 0)
+    {
+        sestring = "0000000000000000" + imm.to_string<char, std::string::traits_type, std::string::allocator_type>();
+    }
+    else
+    {
+        sestring = "1111111111111111" + imm.to_string<char, std::string::traits_type, std::string::allocator_type>();
+    }
+    return (bitset<32>(sestring));
 }
 
 int main()
@@ -265,25 +290,141 @@ int main()
     RF myRF;
     INSMem myInsMem;
     DataMem myDataMem;
+    stateStruct state, newState;
+    auto cycle(0);
+    // state.IF.PC = 0;
+    // state.IF.nop = false;
+    // state.ID.nop = true;
+    // state.EX.nop = true;
+    // state.MEM.nop = true;
+    // state.WB.nop = true;
 
     while (1)
     {
 
         /* --------------------- WB stage --------------------- */
+        if (!state.WB.nop)
+        {
+            if (state.WB.wrt_enable)
+            {
 
+                myRF.writeRF(state.WB.Wrt_reg_addr, state.WB.Wrt_data);
+                cout << "writeRF: " << state.WB.Wrt_reg_addr.to_ulong() << " : " << state.WB.Wrt_data << endl;
+            }
+        }
         /* --------------------- MEM stage --------------------- */
-
+        if (state.MEM.nop)
+        {
+            newState.WB.nop = true;
+            // newState.MEM = state.MEM;
+        }
+        else
+        {
+            newState.WB.nop = false;
+            newState.WB.Wrt_data = state.MEM.ALUresult;
+            if (state.MEM.rd_mem)
+            {
+                newState.WB.Wrt_data = myDataMem.readDataMem(state.MEM.ALUresult);
+            }
+            else if (state.MEM.wrt_mem)
+            {
+                cout << "alu result: " << state.MEM.ALUresult.to_ulong() << ", data:" << state.MEM.Store_data.to_string() << endl;
+                myDataMem.writeDataMem(state.MEM.ALUresult, state.MEM.Store_data);
+            }
+            newState.WB.Rs = state.MEM.Rs;
+            newState.WB.Rt = state.MEM.Rt;
+            newState.WB.wrt_enable = state.MEM.wrt_enable;
+            newState.WB.Wrt_reg_addr = state.MEM.Wrt_reg_addr;
+        }
         /* --------------------- EX stage --------------------- */
+        if (state.EX.nop)
+        {
+            newState.MEM.nop = true;
+            //newState.EX = state.EX;
+        }
+        else
+        {
+            newState.MEM.nop = false;
+            auto ALUin1 = state.EX.Read_data1;
+            auto ALUin2 = (state.EX.is_I_type) ? signextend(state.EX.Imm) : state.EX.Read_data2;
+            auto ALUout = state.EX.alu_op ? ALUin1.to_ulong() + ALUin2.to_ulong() : ALUin1.to_ulong() - ALUin2.to_ulong();
+
+            // newState.MEM.ALUresult = state.EX.wrt_mem ? myRF.readRF(state.EX.Rs) : ALUout;
+            newState.MEM.ALUresult = ALUout;
+            newState.MEM.rd_mem = state.EX.rd_mem;
+            newState.MEM.Rs = state.EX.Rs;
+            newState.MEM.Rt = state.EX.Rt;
+            newState.MEM.wrt_enable = state.EX.wrt_enable;
+            newState.MEM.wrt_mem = state.EX.wrt_mem;
+            newState.MEM.Wrt_reg_addr = state.EX.Wrt_reg_addr;
+
+            newState.MEM.Store_data = state.EX.Read_data2; //myRF.readRF(state.EX.Rt);
+        }
 
         /* --------------------- ID stage --------------------- */
+        if (state.ID.nop)
+        {
+            newState.EX.nop = true;
+        }
+        else
+        {
+            newState.EX.nop = false;
+            auto opcode = bitset<6>((state.ID.Instr >> 26).to_ulong());
+            /*         auto rs = bitset<5>((state.ID.Instr >> 21).to_ulong() & 0x1f);
+        auto rt = bitset<5>((state.ID.Instr >> 16).to_ulong() & 0x1f); */
+            auto funct = bitset<6>((state.ID.Instr).to_ulong() & 0x3f);
+            newState.EX.is_I_type = opcode != 0 && opcode != 2;
+            newState.EX.Rs = bitset<5>((state.ID.Instr >> 21).to_ulong() & 0x1f);
+            newState.EX.Rt = bitset<5>((state.ID.Instr >> 16).to_ulong() & 0x1f);
+            newState.EX.rd_mem = opcode == 0x23;  // lw
+            newState.EX.wrt_mem = opcode == 0x2B; // sw
+            newState.EX.Read_data1 = myRF.readRF(newState.EX.Rs);
+            newState.EX.Read_data2 = myRF.readRF(newState.EX.Rt);
+            // cout << "read " << newState.EX.Rt.to_ulong() << " : " << newState.EX.Read_data2.to_string() << " write mem? " << newState.EX.wrt_mem << endl;
+
+            newState.EX.alu_op = 1;
+            newState.EX.wrt_enable = false;
+            if (newState.EX.is_I_type)
+            {
+                newState.EX.Imm = bitset<16>((state.ID.Instr).to_ulong() & 0xffff);
+                newState.EX.Wrt_reg_addr = newState.EX.Rt; // Rt
+                if (opcode == 0x23)                        // lw
+                    newState.EX.wrt_enable = true;
+            }
+            else
+            {
+                // R type
+                newState.EX.alu_op = funct == 0x23 ? 0 : 1;
+                newState.EX.Wrt_reg_addr = bitset<5>((state.ID.Instr >> 11).to_ulong() & 0x1f); // RD
+                newState.EX.wrt_enable = true;
+            }
+        }
+        // newState.EX.Read_data1 = myRF.readRF(state.ID.Instr);
 
         /* --------------------- IF stage --------------------- */
+        if (state.IF.nop)
+        {
+            newState.ID.nop = true;
+        }
+        else
+        {
+            newState.ID.nop = false;
+            newState.ID.Instr = myInsMem.readInstr(state.IF.PC);
+            newState.IF.PC = state.IF.PC.to_ulong() + 4;
+        }
+
+        if (newState.ID.Instr.all() /* || !newState.ID.Instr.any() */)
+        {
+            newState.IF.nop = true;
+            newState.ID.nop = true;
+            newState.IF.PC = state.IF.PC;
+        }
 
         if (state.IF.nop && state.ID.nop && state.EX.nop && state.MEM.nop && state.WB.nop)
             break;
 
         printState(newState, cycle); //print states after executing cycle 0, cycle 1, cycle 2 ...
-
+        cycle++;
         state = newState; /*The end of the cycle and updates the current state with the values calculated in this cycle */
     }
 
