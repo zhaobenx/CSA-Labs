@@ -428,7 +428,8 @@ int main()
             }
             if (state.EX.wrt_enable) // check if stall is needed
             {
-                if (state.EX.Wrt_reg_addr == newState.EX.Rs || state.EX.Wrt_reg_addr == newState.EX.Rt)
+                // when lw, sw, rt is to be forwarded; when r type, rs, rt both to be checked
+                if (state.EX.Wrt_reg_addr == newState.EX.Rs || (!newState.EX.is_I_type && state.EX.Wrt_reg_addr == newState.EX.Rt))
                     isStall = true;
             }
         }
