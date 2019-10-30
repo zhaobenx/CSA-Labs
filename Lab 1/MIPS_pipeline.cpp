@@ -293,6 +293,7 @@ int main()
     stateStruct state, newState;
     auto cycle(0);
     bool isBranch(0);
+    bool isStall(0);
     auto branchAddress = bitset<32>(0);
     // state.IF.PC = 0;
     // state.IF.nop = false;
@@ -355,6 +356,7 @@ int main()
             newState.MEM.nop = false;
             auto ALUin1 = state.EX.Read_data1;
             auto ALUin2 = (state.EX.is_I_type) ? signextend(state.EX.Imm) : state.EX.Read_data2;
+
             if (state.MEM.wrt_enable) // ex-ex forwarding
             {
                 if (state.EX.Rs == state.MEM.Wrt_reg_addr && !state.MEM.rd_mem)
@@ -424,6 +426,11 @@ int main()
                 newState.EX.Wrt_reg_addr = bitset<5>((state.ID.Instr >> 11).to_ulong() & 0x1f); // RD
                 newState.EX.wrt_enable = true;
             }
+            if (state.EX.rd_mem) // check if stall
+            {
+                if (state.EX.Wrt_reg_addr == newState.EX.Rs || state.EX.Wrt_reg_addr == newState.EX.Rt)
+                    isStall = true;
+            }
         }
         // newState.EX.Read_data1 = myRF.readRF(state.ID.Instr);
 
@@ -446,6 +453,16 @@ int main()
             newState.ID = state.ID;
             newState.ID.nop = true;
         }
+
+        if (isStall)
+        {
+            cout << "Stalled" << endl;
+            isStall = false;
+            newState.IF = state.IF;
+            // newState.ID = state.ID;
+            newState.ID.nop = true;
+        }
+
         if (newState.ID.Instr.all() /* || !newState.ID.Instr.any() */)
         {
             newState.IF.nop = true;
