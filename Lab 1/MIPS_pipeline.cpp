@@ -368,7 +368,7 @@ int main()
             {
                 if (state.EX.Rs == state.WB.Wrt_reg_addr)
                     ALUin1 = state.WB.Wrt_data;
-                if (state.EX.Rt == state.WB.Wrt_reg_addr)
+                if (!state.EX.is_I_type && state.EX.Rt == state.WB.Wrt_reg_addr)
                     ALUin2 = state.WB.Wrt_data;
             }
             auto ALUout = state.EX.alu_op ? ALUin1.to_ulong() + ALUin2.to_ulong() : ALUin1.to_ulong() - ALUin2.to_ulong();
@@ -426,7 +426,7 @@ int main()
                 newState.EX.Wrt_reg_addr = bitset<5>((state.ID.Instr >> 11).to_ulong() & 0x1f); // RD
                 newState.EX.wrt_enable = true;
             }
-            if (state.EX.rd_mem) // check if stall
+            if (state.EX.wrt_enable) // check if stall is needed
             {
                 if (state.EX.Wrt_reg_addr == newState.EX.Rs || state.EX.Wrt_reg_addr == newState.EX.Rt)
                     isStall = true;
@@ -459,8 +459,8 @@ int main()
             cout << "Stalled" << endl;
             isStall = false;
             newState.IF = state.IF;
-            // newState.ID = state.ID;
-            newState.ID.nop = true;
+            newState.ID = state.ID;
+            newState.EX.nop = true;
         }
 
         if (newState.ID.Instr.all() /* || !newState.ID.Instr.any() */)
