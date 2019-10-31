@@ -270,6 +270,12 @@ void printState(stateStruct state, int cycle)
 //     this->Imm;
 // }
 
+unsigned long shiftbits(bitset<32> inst, int start)
+{
+    unsigned long ulonginst;
+    return ((inst.to_ulong()) >> start);
+}
+
 bitset<32> signextend(bitset<16> imm)
 {
     string sestring;
@@ -312,7 +318,8 @@ int main()
             {
 
                 myRF.writeRF(state.WB.Wrt_reg_addr, state.WB.Wrt_data);
-                cout << "writeRF: " << state.WB.Wrt_reg_addr.to_ulong() << " : " << state.WB.Wrt_data << endl;
+                // cout << "writeRF: " << state.WB.Wrt_reg_addr.to_ulong() << " : " << state.WB.Wrt_data << endl;
+                cout << "writeRF\t" << state.WB.Wrt_reg_addr.to_ulong() << "\t" << state.WB.Wrt_data << "(" << state.WB.Wrt_data.to_ullong() << ")" << endl;
             }
         }
         /* --------------------- MEM stage --------------------- */
@@ -332,7 +339,7 @@ int main()
             }
             else if (state.MEM.wrt_mem)
             {
-                cout << "alu result: " << state.MEM.ALUresult.to_ulong() << ", data:" << state.MEM.Store_data.to_string() << endl;
+                cout << "WriteMEM\t" << state.MEM.ALUresult.to_ulong() << "\t" << state.MEM.Store_data.to_string() << "(" << state.MEM.Store_data.to_ullong() << ")" << endl;
                 if (state.WB.wrt_enable && state.WB.Wrt_reg_addr == state.MEM.Rt) // mem-mem forwarding
                 {
                     writeData = state.WB.Wrt_data;
@@ -358,11 +365,14 @@ int main()
             auto ALUin2 = (state.EX.is_I_type) ? signextend(state.EX.Imm) : state.EX.Read_data2;
 
             if (state.MEM.wrt_enable) // ex-ex forwarding
-            {
-                if (state.EX.Rs == state.MEM.Wrt_reg_addr && !state.MEM.rd_mem)
+            {                         // r type rs, lw,sw rs
+                if (state.EX.Rs == state.MEM.Wrt_reg_addr)
                     ALUin1 = state.MEM.ALUresult;
-                else if (state.EX.Rt == state.MEM.Wrt_reg_addr && !state.MEM.rd_mem)
+                // r type rt, lw sw not
+                if (state.EX.Rt == state.MEM.Wrt_reg_addr && !state.EX.rd_mem &&!state.EX.wrt_mem)
                     ALUin2 = state.MEM.ALUresult;
+                // lw
+                // if (state.EX.Rs == state.MEM.Wrt_reg_addr && state.MEM.rd_mem)
             }
             if (state.WB.wrt_enable) // mem-ex forwarding
             {
@@ -403,33 +413,44 @@ int main()
             newState.EX.Rt = bitset<5>((state.ID.Instr >> 16).to_ulong() & 0x1f);
             newState.EX.rd_mem = opcode == 0x23;  // lw
             newState.EX.wrt_mem = opcode == 0x2B; // sw
+            if (opcode == 0x2B)
+                cout<<"";
             newState.EX.Read_data1 = myRF.readRF(newState.EX.Rs);
             newState.EX.Read_data2 = myRF.readRF(newState.EX.Rt);
             // cout << "read " << newState.EX.Rt.to_ulong() << " : " << newState.EX.Read_data2.to_string() << " write mem? " << newState.EX.wrt_mem << endl;
-            branchAddress = state.IF.PC.to_ulong() + 4 + (newState.EX.Imm.to_ulong() << 2);
+
             newState.EX.alu_op = 1;
             newState.EX.wrt_enable = false;
             if (newState.EX.is_I_type)
             {
                 newState.EX.Imm = bitset<16>((state.ID.Instr).to_ulong() & 0xffff);
                 newState.EX.Wrt_reg_addr = newState.EX.Rt; // Rt
-                if (opcode == 0x23)                        // lw
+                if (opcode == 0x23)                        // lw,
                     newState.EX.wrt_enable = true;
                 if (opcode == 0x04) // beq in this lab, treat it as bne
                     if (newState.EX.Read_data2 != newState.EX.Read_data1)
+                    {
                         isBranch = true;
+                        // remove + 4 is very important
+                        // auto sign = newState.EX.Imm[15] == 1 ? -1 : 1;
+                        auto signext = signextend(newState.EX.Imm);
+                        branchAddress = bitset<32>(
+                            state.IF.PC.to_ulong() + (bitset<32>((bitset<30>(shiftbits(signext, 0))).to_string<char, std::string::traits_type, std::string::allocator_type>() + "00")).to_ulong());
+                        // state.IF.PC.to_ulong() + sign * int(newState.EX.Imm.to_ulong() << 2);
+                    }
             }
             else
             {
                 // R type
                 newState.EX.alu_op = funct == 0x23 ? 0 : 1;
                 newState.EX.Wrt_reg_addr = bitset<5>((state.ID.Instr >> 11).to_ulong() & 0x1f); // RD
+                // r type write to rd
                 newState.EX.wrt_enable = true;
             }
             if (state.EX.wrt_enable) // check if stall is needed
             {
                 // when lw, sw, rt is to be forwarded; when r type, rs, rt both to be checked
-                if (state.EX.Wrt_reg_addr == newState.EX.Rs || (!newState.EX.is_I_type && state.EX.Wrt_reg_addr == newState.EX.Rt))
+                if (!state.EX.nop && (state.EX.Wrt_reg_addr == newState.EX.Rs || (!newState.EX.is_I_type && state.EX.Wrt_reg_addr == newState.EX.Rt)))
                     isStall = true;
             }
         }
@@ -449,10 +470,12 @@ int main()
 
         if (isBranch)
         {
+            cout << "Branch from " << state.IF.PC.to_ulong() << " to " << branchAddress.to_ulong() << endl;
             isBranch = false;
             newState.IF.PC = branchAddress;
             newState.ID = state.ID;
             newState.ID.nop = true;
+            newState.EX.nop = true;
         }
 
         if (isStall)
