@@ -342,6 +342,7 @@ int main()
                 cout << "WriteMEM\t" << state.MEM.ALUresult.to_ulong() << "\t" << state.MEM.Store_data.to_string() << "(" << state.MEM.Store_data.to_ullong() << ")" << endl;
                 if (state.WB.wrt_enable && state.WB.Wrt_reg_addr == state.MEM.Rt) // mem-mem forwarding
                 {
+                    cout << "mem-mem forwarding" << endl;
                     writeData = state.WB.Wrt_data;
                 }
 
@@ -363,13 +364,14 @@ int main()
             newState.MEM.nop = false;
             auto ALUin1 = state.EX.Read_data1;
             auto ALUin2 = (state.EX.is_I_type) ? signextend(state.EX.Imm) : state.EX.Read_data2;
+            newState.MEM.Store_data = state.EX.Read_data2; //myRF.readRF(state.EX.Rt);
 
             if (state.MEM.wrt_enable) // ex-ex forwarding
             {                         // r type rs, lw,sw rs
                 if (state.EX.Rs == state.MEM.Wrt_reg_addr)
                     ALUin1 = state.MEM.ALUresult;
                 // r type rt, lw sw not
-                if (state.EX.Rt == state.MEM.Wrt_reg_addr && !state.EX.rd_mem &&!state.EX.wrt_mem)
+                if (state.EX.Rt == state.MEM.Wrt_reg_addr && !state.EX.rd_mem && !state.EX.wrt_mem)
                     ALUin2 = state.MEM.ALUresult;
                 // lw
                 // if (state.EX.Rs == state.MEM.Wrt_reg_addr && state.MEM.rd_mem)
@@ -383,6 +385,13 @@ int main()
             }
             auto ALUout = state.EX.alu_op ? ALUin1.to_ulong() + ALUin2.to_ulong() : ALUin1.to_ulong() - ALUin2.to_ulong();
 
+            // forward to mem
+            if (state.EX.wrt_mem && state.EX.Rt == state.WB.Wrt_reg_addr)
+            {
+                newState.MEM.Store_data = state.WB.Wrt_data;
+
+            }
+
             // newState.MEM.ALUresult = state.EX.wrt_mem ? myRF.readRF(state.EX.Rs) : ALUout;
             newState.MEM.ALUresult = ALUout;
             newState.MEM.rd_mem = state.EX.rd_mem;
@@ -391,8 +400,6 @@ int main()
             newState.MEM.wrt_enable = state.EX.wrt_enable;
             newState.MEM.wrt_mem = state.EX.wrt_mem;
             newState.MEM.Wrt_reg_addr = state.EX.Wrt_reg_addr;
-
-            newState.MEM.Store_data = state.EX.Read_data2; //myRF.readRF(state.EX.Rt);
         }
 
         /* --------------------- ID stage --------------------- */
@@ -413,8 +420,6 @@ int main()
             newState.EX.Rt = bitset<5>((state.ID.Instr >> 16).to_ulong() & 0x1f);
             newState.EX.rd_mem = opcode == 0x23;  // lw
             newState.EX.wrt_mem = opcode == 0x2B; // sw
-            if (opcode == 0x2B)
-                cout<<"";
             newState.EX.Read_data1 = myRF.readRF(newState.EX.Rs);
             newState.EX.Read_data2 = myRF.readRF(newState.EX.Rt);
             // cout << "read " << newState.EX.Rt.to_ulong() << " : " << newState.EX.Read_data2.to_string() << " write mem? " << newState.EX.wrt_mem << endl;
