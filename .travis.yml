@@ -19,6 +19,7 @@ install:
 
 script:
   - bash ./test/test0.sh
+  - bash ./test/test1.sh
 
 notifications:
     email: false
