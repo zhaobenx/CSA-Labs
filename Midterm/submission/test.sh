@@ -4,6 +4,10 @@ tput setaf 2
 echo "Test on branch_taken_rate"
 tput sgr0
 ./MIPS_pipeline_base_code_Q1
+rm dmemresult.txt
+rm RFresult.txt
+rm stateresult.txt
+rm MIPS_pipeline_base_code_Q2
 rm MIPS_pipeline_base_code_Q1
 cd ..
 
