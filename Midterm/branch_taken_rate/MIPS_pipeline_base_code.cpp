@@ -3,6 +3,7 @@
 #include <vector>
 #include <bitset>
 #include <fstream>
+#include <iomanip>
 using namespace std;
 #define MemSize 1000 // memory size, in reality, the memory size should be 2^32, but for this lab, for the space resaon, we keep it as this large number, but the memory is still 32-bit addressable.
 
@@ -572,6 +573,8 @@ int main()
     int cycle = 0;
 
     float branch_taken_rate = 0.0;
+    auto taken(0);
+    auto not_taken(0);
 
     while (1)
     {
@@ -786,10 +789,10 @@ int main()
                     printState(newState, cycle);
                     state = newState;
                     cycle++;
-
+                    taken++;
                     continue;
                 }
-
+                not_taken++;
                 cout << "Branch taken" << endl;
             }
 
@@ -850,6 +853,8 @@ int main()
     myRF.outputRF();           // dump RF;
     myDataMem.outputDataMem(); // dump data mem
 
+    cout << taken << "   " << not_taken << endl;
+    branch_taken_rate = taken / float(taken + not_taken);
     cout << "branch taken rate: " << setprecision(3) << branch_taken_rate << endl;
 
     return 0;
