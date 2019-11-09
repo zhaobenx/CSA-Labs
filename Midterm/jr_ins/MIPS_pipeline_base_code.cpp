@@ -779,6 +779,28 @@ int main()
                     newState.EX.INS = "subu";
                     newState.EX.alu_op = 0;
                 }
+                else if (func == "001000") // jr
+                {
+                    cout << "JR" << endl;
+                    newState.EX.INS = "jr";
+                    newState.EX.Wrt_reg_addr = 0;
+                    newState.EX.is_I_type = false;
+                    newState.EX.alu_op = 1;
+                    newState.EX.wrt_enable = 0;
+                    newState.EX.rd_mem = 0;
+                    newState.EX.wrt_mem = 0;
+                    newState.EX.nop = 0;
+                    newState.ID.nop = 1;
+
+                    newState.IF.PC = myRF.readRF(Rs);
+                    newState.IF.nop = 0;
+
+                    printState(newState, cycle);
+                    state = newState;
+                    cycle++;
+
+                    continue;
+                }
 
                 newState.EX.wrt_enable = 1;
                 newState.EX.rd_mem = 0;
