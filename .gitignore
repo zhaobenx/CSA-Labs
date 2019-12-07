@@ -43,3 +43,6 @@ Lab 1/Code-2018/
 *.app
 
 
+test/testmidterm.sh
+test/CSA_Lab1_test/
+Midterm/MIPS_pipeline_grading.cpp
