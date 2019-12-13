@@ -102,9 +102,11 @@ int main(int argc, char *argv[])
     int M, K;
     vector<pair<uint32_t, bool>> trace;
     int r;
+    // argc = 3;
+    // char *a[] = {"a", "config.txt", "trace.txt"};
     if ((r = read_file(argc, argv, M, K, trace)) != 0)
         return r;
-    if (!(0 < M <= 20 && 0 < K <= 8))
+    if (0 > M || M > 20 || 0 > K || K > 8)
     {
         cout << "Please input valid M, K (0<M<21,0<K<9)" << endl;
         return 1;
@@ -113,8 +115,8 @@ int main(int argc, char *argv[])
     cout << "M: " << M << ", K: " << K << endl;
 
     fstream output("trace.out", fstream::out);
-    char BHR = 0;
-    const int MASK = (1 << M) - 1;
+    uint8_t BHR = 0;
+    const uint32_t MASK = (1 << M) - 1;
     PHT Pht(M, K);
 
     for (auto t : trace)
@@ -124,5 +126,6 @@ int main(int argc, char *argv[])
         BHR = (BHR >> 1) + t.second * (1 << (K - 1));
     }
     output.close();
+    cout << "Done!" << endl;
     return 0;
 }
