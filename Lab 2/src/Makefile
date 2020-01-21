@@ -1,2 +1,2 @@
 branchsimulator.out: branchsimulator.cpp
-	g++ branchsimulator.cpp -o branchsimulator.out
+	g++ branchsimulator.cpp -o branchsimulator.out -O3

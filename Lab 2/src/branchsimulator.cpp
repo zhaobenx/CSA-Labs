@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
         return r;
     if (0 > M || M > 20 || 0 > K || K > 8)
     {
-        cout << "Please input valid M, K (0<M<21,0<K<9)" << endl;
+        cout << "Please input valid M, K (0<=M<21,0<=K<9)" << endl;
         return 1;
     }
 
